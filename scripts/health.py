@@ -57,7 +57,12 @@ else:
             d = get(q, vh); projs += d["projects"]; nxt = d.get("pagination", {}).get("next")
             if not nxt: break
         for p in projs:
-            d = get(f"https://api.vercel.com/v6/deployments?slug={TEAM}&projectId={p['id']}&target=production&limit=1", vh)
+            try:
+                d = get(f"https://api.vercel.com/v6/deployments?slug={TEAM}&projectId={p['id']}&target=production&limit=1", vh, tries=6)
+            except urllib.error.HTTPError:
+                raise
+            except Exception as e:
+                errors.append(f"vercel {p['name']}: {e}"); continue
             deps = d.get("deployments", [])
             if not deps: continue
             st = deps[0].get("state") or deps[0].get("readyState")
@@ -68,8 +73,11 @@ else:
         print(f"vercel projects checked: {len(projs)}")
     except urllib.error.HTTPError as e:
         problems["[health] Vercel API error"] = f"Vercel API returned HTTP {e.code}. Check VERCEL_TOKEN."
+    except Exception as e:
+        errors.append(f"vercel: {e}")
 
 print(f"repos checked: {len(repos)}; problems: {len(problems)}")
 for t in problems: print(" -", t)
 for e in errors: print(" warn:", e)
+if os.environ.get("DRY"): sys.exit(0)
 issues.sync("health", problems)

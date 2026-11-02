@@ -99,4 +99,5 @@ json.dump(out, open(os.path.join(ROOT, "data", f"seo-{now[:7]}.json"), "w"), ind
 for r in results: print(r["url"], r["status"], r.get("score"))
 print("problems:", list(problems))
 # only open/comment for worse-than-before; close prior seo issues whose site is now fine
+if os.environ.get("DRY"): sys.exit(0)
 issues.sync("seo", problems)
